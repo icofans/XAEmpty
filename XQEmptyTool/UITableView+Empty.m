@@ -104,10 +104,16 @@ static char RefreshBlockKey;
 
 - (NSInteger)numberOfRows
 {
+    NSInteger sections = 0; // 此处一定要给初始值
+    if ([self.dataSource respondsToSelector:@selector(numberOfSectionsInTableView:)]) {
+        sections = [self.dataSource numberOfSectionsInTableView:self];
+    } else {
+        sections = self.numberOfSections;
+    }
     if ([self.dataSource respondsToSelector:@selector(tableView:numberOfRowsInSection:)]) {
         // 获取有多少个数据
         NSInteger numberOfRows = 0; // 此处一定要给初始值
-        for (int i = 0; i<self.numberOfSections; i++) {
+        for (int i = 0; i<sections; i++) {
             NSInteger rows = [self.dataSource tableView:self numberOfRowsInSection:i];
             numberOfRows += rows;
         }
