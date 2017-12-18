@@ -37,8 +37,6 @@ static char RefreshBlockKey;
 
 + (void)load
 {
-    [super load];
-    
     // class_getInstanceMethod()
     Method fromMethod = class_getInstanceMethod([self class], @selector(reloadData));
     Method toMethod = class_getInstanceMethod([self class], @selector(tt_reloadData));
