@@ -9,30 +9,82 @@
 #import "UITableView+Empty.h"
 #import <objc/runtime.h>
 
-static char EmptyDescKey;
-static char ShowEmptyViewKey;
 static char ShowErrorViewKey;
 static char ShowLoadViewKey;
 static char RefreshBlockKey;
 
+static char WXErrorImageKey;
+static char WXErrorDescKey;
+static char WXEmptyImageKey;
+static char WXEmptyDescKey;
+
+
 @implementation UITableView (Empty)
 
-- (void)setShowEmptyView:(BOOL)showEmptyView
+
+- (void)setErrorImage:(UIImage *)errorImage
 {
-    objc_setAssociatedObject(self, &ShowEmptyViewKey, @(showEmptyView), OBJC_ASSOCIATION_COPY_NONATOMIC);
+    
+    objc_setAssociatedObject(self, &WXErrorImageKey, errorImage, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
-- (BOOL)showEmptyView
+- (UIImage *)errorImage
 {
-    return objc_getAssociatedObject(self, &ShowEmptyViewKey);
+    if (objc_getAssociatedObject(self, &WXErrorImageKey)) {
+        return objc_getAssociatedObject(self, &WXErrorImageKey);
+    } else if ([UITableView appearance].errorImage) {
+        return [UITableView appearance].errorImage;
+    } else {
+        return nil;
+    }
+}
+
+- (void)setErrorDesc:(NSString *)errorDesc
+{
+    objc_setAssociatedObject(self, &WXErrorDescKey, errorDesc, OBJC_ASSOCIATION_COPY_NONATOMIC);
+}
+
+- (NSString *)errorDesc
+{
+    if (objc_getAssociatedObject(self, &WXErrorDescKey)) {
+        return objc_getAssociatedObject(self, &WXErrorDescKey);
+    } else if ([UITableView appearance].errorDesc) {
+        return [UITableView appearance].errorDesc;
+    } else {
+        return @"轻触屏幕重新加载";
+    }
+}
+
+
+- (void)setEmptyImage:(UIImage *)emptyImage
+{
+    
+    objc_setAssociatedObject(self, &WXEmptyImageKey, emptyImage, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+- (UIImage *)emptyImage
+{
+    if (objc_getAssociatedObject(self, &WXEmptyImageKey)) {
+        return objc_getAssociatedObject(self, &WXEmptyImageKey);
+    } else if ([UITableView appearance].emptyImage) {
+        return [UITableView appearance].emptyImage;
+    } else {
+        return nil;
+    }
 }
 
 - (void)setEmptyDesc:(NSString *)emptyDesc {
-    objc_setAssociatedObject(self, &EmptyDescKey, emptyDesc, OBJC_ASSOCIATION_COPY_NONATOMIC);
+    objc_setAssociatedObject(self, &WXEmptyDescKey, emptyDesc, OBJC_ASSOCIATION_COPY_NONATOMIC);
 }
 
 - (NSString *)emptyDesc {
-    return objc_getAssociatedObject(self, &EmptyDescKey);
+    if (objc_getAssociatedObject(self, &WXEmptyDescKey)) {
+        return objc_getAssociatedObject(self, &WXEmptyDescKey);
+    } else if ([UITableView appearance].emptyDesc) {
+        return [UITableView appearance].emptyDesc;
+    } else {
+        return nil;
+    }
 }
 
 + (void)load
@@ -49,15 +101,14 @@ static char RefreshBlockKey;
 
 - (void)tt_reloadData
 {
-    BOOL showError = objc_getAssociatedObject(self, &ShowErrorViewKey);
-    
+    BOOL showError = [objc_getAssociatedObject(self, &ShowErrorViewKey) boolValue];
     if (showError) {
         // 当前是错误视图
-    } else if (self.showEmptyView) {
+    } else if (self.emptyDesc) {
         NSInteger numberOfRows = [self numberOfRows];
         // 显示空白视图
         if (numberOfRows > 0) {
-            // 有数据
+            // 有数据 移除
             self.backgroundView = nil;
         } else {
             self.backgroundView = nil;
@@ -86,13 +137,8 @@ static char RefreshBlockKey;
                 [indicatorView startAnimating];
                 self.backgroundView = bgView;
             } else {
-                // 无数据
-                UILabel *hitLabel = [[UILabel alloc] init];
-                hitLabel.text = self.emptyDesc?:@"无数据";
-                hitLabel.font = [UIFont preferredFontForTextStyle:UIFontTextStyleBody];
-                hitLabel.textAlignment = NSTextAlignmentCenter;
-                hitLabel.textColor = [UIColor lightGrayColor];
-                self.backgroundView = hitLabel;
+                UIView *customView = [self viewWithImage:self.emptyImage title:self.emptyDesc];
+                self.backgroundView = customView;
             }
             objc_setAssociatedObject(self, &ShowLoadViewKey, @(YES), OBJC_ASSOCIATION_COPY_NONATOMIC);
         }
@@ -126,6 +172,7 @@ static char RefreshBlockKey;
     NSInteger numberOfRows = [self numberOfRows];
     // 如果当期有数据。不显示错误视图
     if (numberOfRows > 0) {
+        self.backgroundView = nil;
         return;
     }
     if (block) {
@@ -133,25 +180,9 @@ static char RefreshBlockKey;
     }
     objc_setAssociatedObject(self, &ShowErrorViewKey, @(YES), OBJC_ASSOCIATION_COPY_NONATOMIC);
     
-    UIView *bgView = [[UIView alloc] init];
-    bgView.frame = self.bounds;
-    
-    UIImageView *imageView = [[UIImageView alloc] init];
-    imageView.image = [UIImage imageNamed:ERROR_IMAGE];
-    [bgView addSubview:imageView];
-    
-    UILabel *freshLabel = [[UILabel alloc] init];
-    freshLabel.text = @"轻触屏幕重新加载";
-    freshLabel.font = [UIFont preferredFontForTextStyle:UIFontTextStyleBody];
-    freshLabel.textAlignment = NSTextAlignmentCenter;
-    freshLabel.textColor = [UIColor lightGrayColor];
-    [bgView addSubview:freshLabel];
-    
-    imageView.frame = CGRectMake((self.frame.size.width-80)/2, self.frame.size.height/2-80, 80, 80);
-    freshLabel.frame = CGRectMake(0, self.frame.size.height/2+10, self.frame.size.width, 20);
-    
+    UIView *bgView = [self viewWithImage:self.errorImage title:self.errorDesc];
     self.backgroundView = bgView;
-    
+
     // 添加点击事件
     UITapGestureRecognizer *tapG = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(clickRefresh)];
     [bgView addGestureRecognizer:tapG];
@@ -164,6 +195,30 @@ static char RefreshBlockKey;
     block();
 }
 
-
+- (UIView *)viewWithImage:(UIImage *)image title:(NSString *)title
+{
+    UIView *bgView = [[UIView alloc] init];
+    bgView.frame = self.bounds;
+    
+    UIImageView *imageView;
+    if (image) {
+        imageView = [[UIImageView alloc] init];
+        imageView.image = image;
+        [bgView addSubview:imageView];
+        imageView.frame = CGRectMake((self.frame.size.width-80)/2, self.frame.size.height/2-80, 80, 80);
+    }
+    
+    UILabel *freshLabel = [[UILabel alloc] init];
+    freshLabel.text = title;
+    freshLabel.font = [UIFont preferredFontForTextStyle:UIFontTextStyleBody];
+    freshLabel.textAlignment = NSTextAlignmentCenter;
+    freshLabel.textColor = [UIColor lightGrayColor];
+    [bgView addSubview:freshLabel];
+    
+    CGFloat maxY = imageView? (CGRectGetMaxY(imageView.frame) + 8) : self.frame.size.height/2-10;
+    freshLabel.frame = CGRectMake(0, maxY, self.frame.size.width, 20);
+    
+    return bgView;
+}
 
 @end

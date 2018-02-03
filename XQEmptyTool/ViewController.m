@@ -96,8 +96,8 @@
         _tableView.delegate = self;
         _tableView.dataSource = self;
         // 设置tableView无数据显示
-        _tableView.showEmptyView = YES;
-        _tableView.emptyDesc = @"啊哈。。我是白的";
+//        _tableView.emptyDesc = @"啊哈。。我是白的";
+        _tableView.errorDesc = @"我就是试试优先级";
     }
     return _tableView;
 }

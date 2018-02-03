@@ -8,6 +8,7 @@
 
 #import "AppDelegate.h"
 #import "ViewController.h"
+#import "UITableView+Empty.h"
 
 @interface AppDelegate ()
 
@@ -22,6 +23,10 @@
     [self.window makeKeyAndVisible];
     self.window.rootViewController = [[UINavigationController alloc] initWithRootViewController:[[ViewController alloc] init]];
     
+    [UITableView appearance].errorImage = [UIImage imageNamed:@"refresh"];
+    [UITableView appearance].errorDesc = @"测试";
+    [UITableView appearance].emptyImage = [UIImage imageNamed:@"refresh"];
+ 
     return YES;
 }
 
